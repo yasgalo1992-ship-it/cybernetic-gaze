@@ -159,17 +159,18 @@ function Eye({ x }: { x: number }) {
           <sphereGeometry args={[r, 48, 32]} />
           <meshStandardMaterial color={C.colors.sclera} roughness={0.35} metalness={0.85} />
         </mesh>
-        {/* íris: anéis contínuos concêntricos sobre a curvatura */}
+        {/* íris: campo de LEDs em anéis radiais (referência) */}
         <group position={[0, 0, 0]}>
-          <IrisCap radius={r * 1.002} theta={0.72} color={C.colors.irisOuter} emissive={C.colors.irisOuter} emissiveIntensity={1.4} metalness={0.4} roughness={0.2} />
-          <IrisCap radius={r * 1.006} theta={0.63} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.15} />
-          <IrisCap radius={r * 1.01} theta={0.54} color={C.colors.irisMid} emissive={C.colors.irisMid} emissiveIntensity={1.1} />
-          <IrisCap radius={r * 1.014} theta={0.45} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.2} />
-          <IrisCap radius={r * 1.018} theta={0.34} color={C.colors.irisInner} emissive={C.colors.irisInner} emissiveIntensity={1.6} />
-          <IrisCap radius={r * 1.022} theta={0.26} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.3} />
+          {/* anel externo fino (limbo) */}
+          <IrisCap radius={r * 1.0} theta={C.iris.thetaOuter + 0.05} color={C.colors.irisOuter} emissive={C.colors.irisOuter} emissiveIntensity={0.5} metalness={0.4} roughness={0.25} />
+          {/* fundo profundo da íris */}
+          <IrisCap radius={r * 1.004} theta={C.iris.thetaOuter + 0.02} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.12} />
+          {/* pontinhos */}
+          <DottedIris radius={r * 1.012} />
           {/* pupila */}
-          <IrisCap radius={r * 1.026} theta={0.17} color={C.colors.pupil} roughness={0.1} metalness={0.2} />
+          <IrisCap radius={r * 1.02} theta={C.iris.thetaInner - 0.02} color={C.colors.pupil} roughness={0.1} metalness={0.2} />
         </group>
+
         {/* cúpula de vidro com reflexo */}
         <mesh>
           <sphereGeometry args={[r * 1.045, 48, 32]} />
