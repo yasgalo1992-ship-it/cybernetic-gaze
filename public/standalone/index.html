@@ -218,6 +218,7 @@
         for (const e of eyes) {
           e.globe.rotation.y = yaw;
           e.globe.rotation.x = pitch;
+          e.upper.visible = e.lower.visible = close > 0.01;
           e.upper.scale.y = Math.max(0.001, close * 1.02);
           e.lower.scale.y = Math.max(0.001, close * 0.55);
         }

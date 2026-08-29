@@ -74,8 +74,15 @@ function Eye({ x }: { x: number }) {
       globe.current.rotation.x = gaze.pitch;
     }
     const close = gaze.blink; // 0 aberto -> 1 fechado
-    if (upper.current) upper.current.scale.y = Math.max(0.001, close * 1.02);
-    if (lower.current) lower.current.scale.y = Math.max(0.001, close * 0.55);
+    const open = close > 0.01;
+    if (upper.current) {
+      upper.current.visible = open;
+      upper.current.scale.y = Math.max(0.001, close * 1.02);
+    }
+    if (lower.current) {
+      lower.current.visible = open;
+      lower.current.scale.y = Math.max(0.001, close * 0.55);
+    }
   });
 
   return (
