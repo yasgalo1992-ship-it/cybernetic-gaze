@@ -28,11 +28,11 @@ export const EYE_CONFIG = {
 
   /** ÍRIS DE PONTINHOS (LEDs) — estilo da referência */
   iris: {
-    rings: 26, // quantidade de anéis de LEDs
+    rings: 22, // quantidade de anéis de LEDs
     thetaInner: 0.34, // onde a íris começa (borda da pupila, radianos)
     thetaOuter: 0.78, // onde a íris termina (borda externa)
-    dotSize: 0.019, // raio de cada pontinho
-    dotSizeOuterBoost: 1.5, // pontinhos externos maiores que os internos
+    dotSize: 0.013, // raio de cada pontinho
+    dotSizeOuterBoost: 1.6, // pontinhos externos maiores que os internos
     density: 1.0, // multiplicador da quantidade de pontos por anel
     jitter: 0.12, // irregularidade natural (0 = perfeitamente alinhado)
     brightnessInner: 0.35, // brilho perto da pupila (mais escuro)

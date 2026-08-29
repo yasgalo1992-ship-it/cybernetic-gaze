@@ -58,7 +58,7 @@ function DottedIris({ radius }: { radius: number }) {
       const theta = cfg.thetaInner + (cfg.thetaOuter - cfg.thetaInner) * t;
       const ringRadius = Math.sin(theta) * radius;
       const size = cfg.dotSize * (1 + (cfg.dotSizeOuterBoost - 1) * t);
-      const count = Math.max(6, Math.round((2 * Math.PI * ringRadius * cfg.density) / (size * 2.35)));
+      const count = Math.max(6, Math.round((2 * Math.PI * ringRadius * cfg.density) / (size * 3.3)));
       const offset = (i % 2) * (Math.PI / count);
       const color = cInner.clone().lerp(cOuter, t);
       const brightness = cfg.brightnessInner + (cfg.brightnessOuter - cfg.brightnessInner) * t;
