@@ -64,6 +64,9 @@
         hideCursorAfterMs: 2500,
       };
 
+      /** pálpebra escondida atrás do globo (aberto) -> cobrindo a frente (fechado) */
+      const LID_OPEN = Math.PI / 2 + 0.18;
+
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
       const camera = new THREE.PerspectiveCamera(CFG.cameraFov, 1, 0.1, 100);
@@ -127,17 +130,24 @@
         );
         root.add(globe);
 
-        const lidGeo = new THREE.SphereGeometry(r * 1.06, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+        // Pálpebras = calotas esféricas que GIRAM (nunca são achatadas),
+        // por isso a borda sempre acompanha a curvatura do olho.
         const lidMat = new THREE.MeshStandardMaterial({
           color: 0x04080d,
-          roughness: 0.35,
+          roughness: 0.4,
           metalness: 0.9,
           side: THREE.DoubleSide,
         });
-        const upper = new THREE.Mesh(lidGeo, lidMat);
-        const lower = new THREE.Mesh(lidGeo, lidMat);
-        lower.rotation.x = Math.PI;
-        upper.scale.y = lower.scale.y = 0.001;
+        const upper = new THREE.Mesh(
+          new THREE.SphereGeometry(r * 1.07, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2),
+          lidMat,
+        );
+        const lower = new THREE.Mesh(
+          new THREE.SphereGeometry(r * 1.062, 64, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+          lidMat,
+        );
+        upper.rotation.x = -LID_OPEN;
+        lower.rotation.x = LID_OPEN;
         root.add(upper, lower);
 
         return { root, globe, upper, lower };
@@ -218,9 +228,8 @@
         for (const e of eyes) {
           e.globe.rotation.y = yaw;
           e.globe.rotation.x = pitch;
-          e.upper.visible = e.lower.visible = close > 0.01;
-          e.upper.scale.y = Math.max(0.001, close * 1.02);
-          e.lower.scale.y = Math.max(0.001, close * 0.55);
+          e.upper.rotation.x = -LID_OPEN + close * (LID_OPEN + 0.06);
+          e.lower.rotation.x = LID_OPEN - close * (LID_OPEN + 0.02) * 0.92;
         }
         renderer.render(scene, camera);
       }
