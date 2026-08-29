@@ -12,6 +12,7 @@ import { EYE_CONFIG as C } from "../config/eyes";
 function IrisCap({
   radius,
   theta,
+  thetaStart = 0,
   color,
   emissive,
   emissiveIntensity = 1,
@@ -20,6 +21,7 @@ function IrisCap({
 }: {
   radius: number;
   theta: number;
+  thetaStart?: number;
   color: string;
   emissive?: string;
   emissiveIntensity?: number;
@@ -28,7 +30,7 @@ function IrisCap({
 }) {
   return (
     <mesh rotation-x={Math.PI / 2}>
-      <sphereGeometry args={[radius, 64, 32, 0, Math.PI * 2, 0, theta]} />
+      <sphereGeometry args={[radius, 64, 32, 0, Math.PI * 2, thetaStart, theta]} />
       <meshStandardMaterial
         color={color}
         emissive={emissive ?? "#000000"}
@@ -161,16 +163,15 @@ function Eye({ x }: { x: number }) {
         </mesh>
         {/* íris: campo de LEDs em anéis radiais (referência) */}
         <group position={[0, 0, 0]}>
-          {/* anel externo fino (limbo) */}
-          <IrisCap radius={r * 1.0} theta={C.iris.thetaOuter + 0.05} color={C.colors.irisOuter} emissive={C.colors.irisOuter} emissiveIntensity={0.5} metalness={0.4} roughness={0.25} />
-          {/* fundo profundo da íris */}
-          <IrisCap radius={r * 1.004} theta={C.iris.thetaOuter + 0.02} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.12} />
+          {/* fundo profundo e escuro da íris (contraste para os LEDs) */}
+          <IrisCap radius={r * 1.004} theta={C.iris.thetaOuter + 0.04} color={C.colors.irisDeep} emissive={C.colors.irisDeep} emissiveIntensity={0.25} roughness={0.35} metalness={0.5} />
           {/* pontinhos */}
           <DottedIris radius={r * 1.012} />
+          {/* limbo: anel externo fino e luminoso */}
+          <IrisCap radius={r * 1.03} theta={0.02} thetaStart={C.iris.thetaOuter + 0.13} color={C.colors.irisOuter} emissive={C.colors.irisOuter} emissiveIntensity={1.2} roughness={0.2} metalness={0.3} />
           {/* pupila */}
           <IrisCap radius={r * 1.02} theta={C.iris.thetaInner - 0.02} color={C.colors.pupil} roughness={0.1} metalness={0.2} />
         </group>
-
         {/* cúpula de vidro com reflexo */}
         <mesh>
           <sphereGeometry args={[r * 1.045, 48, 32]} />
