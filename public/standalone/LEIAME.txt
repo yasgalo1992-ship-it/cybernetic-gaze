@@ -1,0 +1,25 @@
+VERSÃO ESTÁTICA INDEPENDENTE (sem build, sem Lovable, sem backend)
+==================================================================
+
+Esta pasta é um site completo. Basta enviar os 2 arquivos:
+
+  index.html            -> a página inteira (visual + animação)
+  three.module.min.js   -> biblioteca 3D local (nenhuma CDN é usada)
+
+Hospede em GitHub Pages, Netlify, Vercel, Hostgator, cPanel, etc.
+Também funciona abrindo por um servidor local simples:
+
+  npx serve .        (ou)   python3 -m http.server
+
+Obs.: por causa de módulos ES, abrir via file:// direto não funciona
+em alguns navegadores — use qualquer servidor estático.
+
+ONDE EDITAR
+-----------
+Tudo fica no bloco "PAINEL DE CONTROLE" dentro de index.html:
+  - eyeRadius / eyeSeparation / cameraDistance -> tamanho e posição
+  - colors                                     -> cores neon, pupila, vidro
+  - motion                                     -> velocidade e pausas do olhar
+  - blink                                      -> frequência e duração das piscadas
+  - maxPixelRatio                              -> desempenho (menor = mais leve)
+  - hideCursorAfterMs                          -> tempo até o cursor sumir

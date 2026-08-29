@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Olhos de Robô — Animação Neon em 3D</title>
+    <meta
+      name="description"
+      content="Dois olhos de robô futuristas em 3D com brilho azul neon, rotação realista do globo ocular e piscadas naturais em tela cheia."
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+      body.hide-cursor {
+        cursor: none;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="importmap">
+      { "imports": { "three": "./three.module.min.js" } }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+
+      /* ======================================================
+         PAINEL DE CONTROLE (edite aqui: cor, tamanho, ritmo)
+         ====================================================== */
+      const CFG = {
+        eyeRadius: 1,
+        eyeSeparation: 1.35,
+        cameraDistance: 6.2,
+        cameraFov: 32,
+        colors: {
+          sclera: 0x0a1420,
+          irisOuter: 0x00e5ff,
+          irisMid: 0x0b8fd6,
+          irisInner: 0x00b3ff,
+          irisDeep: 0x062033,
+          pupil: 0x000308,
+          glow: 0x00d5ff,
+          glass: 0x39e6ff,
+        },
+        motion: {
+          maxYaw: 0.62,
+          maxPitch: 0.42,
+          smoothing: 3.2,
+          minHold: 0.7,
+          maxHold: 2.8,
+          centerChance: 0.28,
+          micro: 0.02,
+        },
+        blink: { minInterval: 2.6, maxInterval: 7.5, duration: 0.17, doubleChance: 0.18 },
+        maxPixelRatio: 1.5,
+        hideCursorAfterMs: 2500,
+      };
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+      const camera = new THREE.PerspectiveCamera(CFG.cameraFov, 1, 0.1, 100);
+      camera.position.z = CFG.cameraDistance;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      document.body.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+      const dir = new THREE.DirectionalLight(0xbfefff, 1.1);
+      dir.position.set(3, 4, 6);
+      scene.add(dir);
+      const pl = new THREE.PointLight(CFG.colors.glow, 12, 16);
+      pl.position.set(-4, -2, 3);
+      scene.add(pl);
+
+      const cap = (r, theta, color, emissive, ei, rough, metal) => {
+        const g = new THREE.SphereGeometry(r, 64, 32, 0, Math.PI * 2, 0, theta);
+        const m = new THREE.MeshStandardMaterial({
+          color,
+          emissive: emissive ?? 0x000000,
+          emissiveIntensity: ei ?? 1,
+          roughness: rough ?? 0.25,
+          metalness: metal ?? 0.6,
+        });
+        const mesh = new THREE.Mesh(g, m);
+        mesh.rotation.x = Math.PI / 2;
+        return mesh;
+      };
+
+      function makeEye(x) {
+        const r = CFG.eyeRadius;
+        const root = new THREE.Group();
+        root.position.x = x;
+
+        const globe = new THREE.Group();
+        globe.add(
+          new THREE.Mesh(
+            new THREE.SphereGeometry(r, 48, 32),
+            new THREE.MeshStandardMaterial({ color: CFG.colors.sclera, roughness: 0.35, metalness: 0.85 }),
+          ),
+        );
+        globe.add(cap(r * 1.002, 0.72, CFG.colors.irisOuter, CFG.colors.irisOuter, 1.4, 0.2, 0.4));
+        globe.add(cap(r * 1.006, 0.63, CFG.colors.irisDeep, CFG.colors.glow, 0.15));
+        globe.add(cap(r * 1.01, 0.54, CFG.colors.irisMid, CFG.colors.irisMid, 1.1));
+        globe.add(cap(r * 1.014, 0.45, CFG.colors.irisDeep, CFG.colors.glow, 0.2));
+        globe.add(cap(r * 1.018, 0.34, CFG.colors.irisInner, CFG.colors.irisInner, 1.6));
+        globe.add(cap(r * 1.022, 0.26, CFG.colors.irisDeep, CFG.colors.glow, 0.3));
+        globe.add(cap(r * 1.026, 0.17, CFG.colors.pupil, 0x000000, 0, 0.1, 0.2));
+        globe.add(
+          new THREE.Mesh(
+            new THREE.SphereGeometry(r * 1.045, 48, 32),
+            new THREE.MeshStandardMaterial({
+              color: CFG.colors.glass,
+              transparent: true,
+              opacity: 0.1,
+              roughness: 0.05,
+              metalness: 0.2,
+            }),
+          ),
+        );
+        root.add(globe);
+
+        const lidGeo = new THREE.SphereGeometry(r * 1.06, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+        const lidMat = new THREE.MeshStandardMaterial({
+          color: 0x04080d,
+          roughness: 0.35,
+          metalness: 0.9,
+          side: THREE.DoubleSide,
+        });
+        const upper = new THREE.Mesh(lidGeo, lidMat);
+        const lower = new THREE.Mesh(lidGeo, lidMat);
+        lower.rotation.x = Math.PI;
+        upper.scale.y = lower.scale.y = 0.001;
+        root.add(upper, lower);
+
+        return { root, globe, upper, lower };
+      }
+
+      const eyes = [makeEye(-CFG.eyeSeparation), makeEye(CFG.eyeSeparation)];
+      eyes.forEach((e) => scene.add(e.root));
+
+      /* ---------------- movimento e piscada ---------------- */
+      const st = { yaw: 0, pitch: 0, tYaw: 0, tPitch: 0, hold: 1, blinkIn: 2, blinkT: -1, queued: 0 };
+      const clock = new THREE.Clock();
+
+      function resize() {
+        const w = window.innerWidth,
+          h = window.innerHeight;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, CFG.maxPixelRatio));
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      let raf = 0;
+      let running = true;
+      document.addEventListener("visibilitychange", () => {
+        running = !document.hidden;
+        if (running) {
+          clock.getDelta();
+          raf = requestAnimationFrame(tick);
+        } else cancelAnimationFrame(raf);
+      });
+
+      function tick() {
+        raf = requestAnimationFrame(tick);
+        const dt = Math.min(clock.getDelta(), 0.05);
+        const m = CFG.motion;
+
+        st.hold -= dt;
+        if (st.hold <= 0) {
+          st.hold = m.minHold + Math.random() * (m.maxHold - m.minHold);
+          if (Math.random() < m.centerChance) {
+            st.tYaw = 0;
+            st.tPitch = 0;
+          } else {
+            st.tYaw = (Math.random() * 2 - 1) * m.maxYaw;
+            st.tPitch = (Math.random() * 2 - 1) * m.maxPitch;
+          }
+        }
+        const k = 1 - Math.exp(-m.smoothing * dt);
+        st.yaw += (st.tYaw - st.yaw) * k;
+        st.pitch += (st.tPitch - st.pitch) * k;
+
+        const t = clock.elapsedTime;
+        const yaw = st.yaw + Math.sin(t * 1.7) * m.micro;
+        const pitch = -st.pitch + Math.cos(t * 2.3) * m.micro;
+
+        const b = CFG.blink;
+        let close = 0;
+        if (st.blinkT >= 0) {
+          st.blinkT += dt;
+          const p = st.blinkT / b.duration;
+          if (p >= 1) {
+            st.blinkT = -1;
+            if (st.queued > 0) {
+              st.queued--;
+              st.blinkT = 0;
+            } else st.blinkIn = b.minInterval + Math.random() * (b.maxInterval - b.minInterval);
+          } else close = Math.sin(p * Math.PI);
+        } else {
+          st.blinkIn -= dt;
+          if (st.blinkIn <= 0) {
+            st.blinkT = 0;
+            st.queued = Math.random() < b.doubleChance ? 1 : 0;
+          }
+        }
+
+        for (const e of eyes) {
+          e.globe.rotation.y = yaw;
+          e.globe.rotation.x = pitch;
+          e.upper.scale.y = Math.max(0.001, close * 1.02);
+          e.lower.scale.y = Math.max(0.001, close * 0.55);
+        }
+        renderer.render(scene, camera);
+      }
+      raf = requestAnimationFrame(tick);
+
+      /* ---------------- cursor ---------------- */
+      let cursorTimer;
+      const armCursor = () => {
+        document.body.classList.remove("hide-cursor");
+        clearTimeout(cursorTimer);
+        cursorTimer = setTimeout(() => document.body.classList.add("hide-cursor"), CFG.hideCursorAfterMs);
+      };
+      window.addEventListener("mousemove", armCursor);
+      window.addEventListener("touchstart", armCursor);
+      armCursor();
+    </script>
+  </body>
+</html>
