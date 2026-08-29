@@ -26,6 +26,19 @@ export const EYE_CONFIG = {
     glass: "#39e6ff", // cúpula de vidro
   },
 
+  /** ÍRIS DE PONTINHOS (LEDs) — estilo da referência */
+  iris: {
+    rings: 22, // quantidade de anéis de LEDs
+    thetaInner: 0.34, // onde a íris começa (borda da pupila, radianos)
+    thetaOuter: 0.78, // onde a íris termina (borda externa)
+    dotSize: 0.013, // raio de cada pontinho
+    dotSizeOuterBoost: 1.6, // pontinhos externos maiores que os internos
+    density: 1.0, // multiplicador da quantidade de pontos por anel
+    jitter: 0.12, // irregularidade natural (0 = perfeitamente alinhado)
+    brightnessInner: 0.35, // brilho perto da pupila (mais escuro)
+    brightnessOuter: 1.0, // brilho na borda externa
+  },
+
   /** MOVIMENTO DO OLHAR */
   motion: {
     maxYaw: 0.62, // rotação máxima horizontal (radianos)

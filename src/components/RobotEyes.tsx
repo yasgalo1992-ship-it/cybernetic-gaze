@@ -12,6 +12,7 @@ import { EYE_CONFIG as C } from "../config/eyes";
 function IrisCap({
   radius,
   theta,
+  thetaStart = 0,
   color,
   emissive,
   emissiveIntensity = 1,
@@ -20,6 +21,7 @@ function IrisCap({
 }: {
   radius: number;
   theta: number;
+  thetaStart?: number;
   color: string;
   emissive?: string;
   emissiveIntensity?: number;
@@ -28,7 +30,7 @@ function IrisCap({
 }) {
   return (
     <mesh rotation-x={Math.PI / 2}>
-      <sphereGeometry args={[radius, 64, 32, 0, Math.PI * 2, 0, theta]} />
+      <sphereGeometry args={[radius, 64, 32, 0, Math.PI * 2, thetaStart, theta]} />
       <meshStandardMaterial
         color={color}
         emissive={emissive ?? "#000000"}
@@ -38,6 +40,63 @@ function IrisCap({
       />
     </mesh>
   );
+}
+
+/**
+ * Íris feita de centenas de pontinhos (LEDs) distribuídos em anéis radiais,
+ * exatamente sobre a curvatura do globo. Usa InstancedMesh (1 draw call).
+ */
+function DottedIris({ radius }: { radius: number }) {
+  const mesh = useMemo(() => {
+    const cfg = C.iris;
+    const cInner = new THREE.Color(C.colors.irisInner);
+    const cOuter = new THREE.Color(C.colors.irisOuter);
+
+    type Dot = { p: THREE.Vector3; s: number; c: THREE.Color };
+    const dots: Dot[] = [];
+
+    for (let i = 0; i < cfg.rings; i++) {
+      const t = cfg.rings === 1 ? 0 : i / (cfg.rings - 1);
+      const theta = cfg.thetaInner + (cfg.thetaOuter - cfg.thetaInner) * t;
+      const ringRadius = Math.sin(theta) * radius;
+      const size = cfg.dotSize * (1 + (cfg.dotSizeOuterBoost - 1) * t);
+      const count = Math.max(6, Math.round((2 * Math.PI * ringRadius * cfg.density) / (size * 3.3)));
+      const offset = (i % 2) * (Math.PI / count);
+      const color = cInner.clone().lerp(cOuter, t);
+      const brightness = cfg.brightnessInner + (cfg.brightnessOuter - cfg.brightnessInner) * t;
+
+      for (let j = 0; j < count; j++) {
+        const phi = offset + (j / count) * Math.PI * 2;
+        const jt = theta + (Math.random() - 0.5) * cfg.jitter * 0.06;
+        const jp = phi + (Math.random() - 0.5) * cfg.jitter * (Math.PI / count);
+        dots.push({
+          p: new THREE.Vector3(
+            radius * Math.sin(jt) * Math.cos(jp),
+            radius * Math.sin(jt) * Math.sin(jp),
+            radius * Math.cos(jt),
+          ),
+          s: size * (1 + (Math.random() - 0.5) * cfg.jitter),
+          c: color.clone().multiplyScalar(brightness * (0.85 + Math.random() * 0.3)),
+        });
+      }
+    }
+
+    const geo = new THREE.SphereGeometry(1, 8, 6);
+    const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
+    const im = new THREE.InstancedMesh(geo, mat, dots.length);
+    const m4 = new THREE.Matrix4();
+    dots.forEach((d, idx) => {
+      m4.makeScale(d.s, d.s, d.s * 0.8);
+      m4.setPosition(d.p);
+      im.setMatrixAt(idx, m4);
+      im.setColorAt(idx, d.c);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    return im;
+  }, [radius]);
+
+  return <primitive object={mesh} />;
 }
 
 /** Pálpebra robótica: calota escura que desce/sobe sobre o globo. */
@@ -102,16 +161,16 @@ function Eye({ x }: { x: number }) {
           <sphereGeometry args={[r, 48, 32]} />
           <meshStandardMaterial color={C.colors.sclera} roughness={0.35} metalness={0.85} />
         </mesh>
-        {/* íris: anéis contínuos concêntricos sobre a curvatura */}
+        {/* íris: campo de LEDs em anéis radiais (referência) */}
         <group position={[0, 0, 0]}>
-          <IrisCap radius={r * 1.002} theta={0.72} color={C.colors.irisOuter} emissive={C.colors.irisOuter} emissiveIntensity={1.4} metalness={0.4} roughness={0.2} />
-          <IrisCap radius={r * 1.006} theta={0.63} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.15} />
-          <IrisCap radius={r * 1.01} theta={0.54} color={C.colors.irisMid} emissive={C.colors.irisMid} emissiveIntensity={1.1} />
-          <IrisCap radius={r * 1.014} theta={0.45} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.2} />
-          <IrisCap radius={r * 1.018} theta={0.34} color={C.colors.irisInner} emissive={C.colors.irisInner} emissiveIntensity={1.6} />
-          <IrisCap radius={r * 1.022} theta={0.26} color={C.colors.irisDeep} emissive={C.colors.glow} emissiveIntensity={0.3} />
+          {/* fundo profundo e escuro da íris (contraste para os LEDs) */}
+          <IrisCap radius={r * 1.004} theta={C.iris.thetaOuter + 0.04} color={C.colors.irisDeep} emissive={C.colors.irisDeep} emissiveIntensity={0.25} roughness={0.35} metalness={0.5} />
+          {/* pontinhos */}
+          <DottedIris radius={r * 1.012} />
+          {/* limbo: anel externo fino e luminoso */}
+          <IrisCap radius={r * 1.03} theta={0.02} thetaStart={C.iris.thetaOuter + 0.13} color={C.colors.irisOuter} emissive={C.colors.irisOuter} emissiveIntensity={1.2} roughness={0.2} metalness={0.3} />
           {/* pupila */}
-          <IrisCap radius={r * 1.026} theta={0.17} color={C.colors.pupil} roughness={0.1} metalness={0.2} />
+          <IrisCap radius={r * 1.02} theta={C.iris.thetaInner - 0.02} color={C.colors.pupil} roughness={0.1} metalness={0.2} />
         </group>
         {/* cúpula de vidro com reflexo */}
         <mesh>
