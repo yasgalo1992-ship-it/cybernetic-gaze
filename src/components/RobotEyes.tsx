@@ -128,8 +128,9 @@ function Eye({ x }: { x: number }) {
       </group>
 
       {/* pálpebras (não giram com o globo) */}
-      <Lid flip={false} radius={r * 1.06} lidRef={upper} />
-      <Lid flip radius={r * 1.06} lidRef={lower} />
+      <Lid lower={false} radius={r * 1.07} lidRef={upper} />
+      <Lid lower radius={r * 1.062} lidRef={lower} />
+
     </group>
   );
 }
