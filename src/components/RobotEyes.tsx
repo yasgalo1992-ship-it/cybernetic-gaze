@@ -42,24 +42,38 @@ function IrisCap({
 
 /** Pálpebra robótica: calota escura que desce/sobe sobre o globo. */
 function Lid({
-  flip,
+  lower,
   radius,
   lidRef,
 }: {
-  flip: boolean;
+  lower: boolean;
   radius: number;
   lidRef: React.RefObject<THREE.Mesh | null>;
 }) {
+  // Calota esférica (meia esfera). Ela NÃO é escalada — apenas gira sobre o eixo X,
+  // então a borda da pálpebra sempre acompanha a curvatura do globo (sem retângulos).
   const geo = useMemo(
-    () => new THREE.SphereGeometry(radius, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2),
-    [radius],
+    () =>
+      new THREE.SphereGeometry(
+        radius,
+        64,
+        32,
+        0,
+        Math.PI * 2,
+        lower ? Math.PI / 2 : 0,
+        Math.PI / 2,
+      ),
+    [radius, lower],
   );
   return (
-    <mesh ref={lidRef} geometry={geo} rotation-x={flip ? Math.PI : 0} scale={[1, 0.001, 1]}>
-      <meshStandardMaterial color="#04080d" roughness={0.35} metalness={0.9} side={THREE.DoubleSide} />
+    <mesh ref={lidRef} geometry={geo}>
+      <meshStandardMaterial color="#04080d" roughness={0.4} metalness={0.9} side={THREE.DoubleSide} />
     </mesh>
   );
 }
+
+/** Ângulos: pálpebra escondida atrás do globo (aberto) -> cobrindo a frente (fechado). */
+const LID_OPEN = Math.PI / 2 + 0.18;
 
 function Eye({ x }: { x: number }) {
   const globe = useRef<THREE.Group>(null);
@@ -74,16 +88,11 @@ function Eye({ x }: { x: number }) {
       globe.current.rotation.x = gaze.pitch;
     }
     const close = gaze.blink; // 0 aberto -> 1 fechado
-    const open = close > 0.01;
-    if (upper.current) {
-      upper.current.visible = open;
-      upper.current.scale.y = Math.max(0.001, close * 1.02);
-    }
-    if (lower.current) {
-      lower.current.visible = open;
-      lower.current.scale.y = Math.max(0.001, close * 0.55);
-    }
+    // pálpebra superior desce em arco; a inferior sobe um pouco menos
+    if (upper.current) upper.current.rotation.x = -LID_OPEN + close * (LID_OPEN + 0.06);
+    if (lower.current) lower.current.rotation.x = LID_OPEN - close * (LID_OPEN + 0.02) * 0.92;
   });
+
 
   return (
     <group position={[x, 0, 0]}>
