@@ -40,6 +40,63 @@ function IrisCap({
   );
 }
 
+/**
+ * Íris feita de centenas de pontinhos (LEDs) distribuídos em anéis radiais,
+ * exatamente sobre a curvatura do globo. Usa InstancedMesh (1 draw call).
+ */
+function DottedIris({ radius }: { radius: number }) {
+  const mesh = useMemo(() => {
+    const cfg = C.iris;
+    const cInner = new THREE.Color(C.colors.irisInner);
+    const cOuter = new THREE.Color(C.colors.irisOuter);
+
+    type Dot = { p: THREE.Vector3; s: number; c: THREE.Color };
+    const dots: Dot[] = [];
+
+    for (let i = 0; i < cfg.rings; i++) {
+      const t = cfg.rings === 1 ? 0 : i / (cfg.rings - 1);
+      const theta = cfg.thetaInner + (cfg.thetaOuter - cfg.thetaInner) * t;
+      const ringRadius = Math.sin(theta) * radius;
+      const size = cfg.dotSize * (1 + (cfg.dotSizeOuterBoost - 1) * t);
+      const count = Math.max(6, Math.round((2 * Math.PI * ringRadius * cfg.density) / (size * 2.35)));
+      const offset = (i % 2) * (Math.PI / count);
+      const color = cInner.clone().lerp(cOuter, t);
+      const brightness = cfg.brightnessInner + (cfg.brightnessOuter - cfg.brightnessInner) * t;
+
+      for (let j = 0; j < count; j++) {
+        const phi = offset + (j / count) * Math.PI * 2;
+        const jt = theta + (Math.random() - 0.5) * cfg.jitter * 0.06;
+        const jp = phi + (Math.random() - 0.5) * cfg.jitter * (Math.PI / count);
+        dots.push({
+          p: new THREE.Vector3(
+            radius * Math.sin(jt) * Math.cos(jp),
+            radius * Math.sin(jt) * Math.sin(jp),
+            radius * Math.cos(jt),
+          ),
+          s: size * (1 + (Math.random() - 0.5) * cfg.jitter),
+          c: color.clone().multiplyScalar(brightness * (0.85 + Math.random() * 0.3)),
+        });
+      }
+    }
+
+    const geo = new THREE.SphereGeometry(1, 8, 6);
+    const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
+    const im = new THREE.InstancedMesh(geo, mat, dots.length);
+    const m4 = new THREE.Matrix4();
+    dots.forEach((d, idx) => {
+      m4.makeScale(d.s, d.s, d.s * 0.8);
+      m4.setPosition(d.p);
+      im.setMatrixAt(idx, m4);
+      im.setColorAt(idx, d.c);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    return im;
+  }, [radius]);
+
+  return <primitive object={mesh} />;
+}
+
 /** Pálpebra robótica: calota escura que desce/sobe sobre o globo. */
 function Lid({
   lower,
