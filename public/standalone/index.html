@@ -50,6 +50,17 @@
           glow: 0x00d5ff,
           glass: 0x39e6ff,
         },
+        iris: {
+          rings: 18,
+          thetaInner: 0.34,
+          thetaOuter: 0.78,
+          dotSize: 0.012,
+          dotSizeOuterBoost: 1.5,
+          density: 0.82,
+          jitter: 0.12,
+          brightnessInner: 0.3,
+          brightnessOuter: 1.0,
+        },
         motion: {
           maxYaw: 0.62,
           maxPitch: 0.42,
@@ -83,8 +94,8 @@
       pl.position.set(-4, -2, 3);
       scene.add(pl);
 
-      const cap = (r, theta, color, emissive, ei, rough, metal) => {
-        const g = new THREE.SphereGeometry(r, 64, 32, 0, Math.PI * 2, 0, theta);
+      const cap = (r, theta, color, emissive, ei, rough, metal, thetaStart) => {
+        const g = new THREE.SphereGeometry(r, 64, 32, 0, Math.PI * 2, thetaStart ?? 0, theta);
         const m = new THREE.MeshStandardMaterial({
           color,
           emissive: emissive ?? 0x000000,
@@ -96,6 +107,56 @@
         mesh.rotation.x = Math.PI / 2;
         return mesh;
       };
+
+      /** Íris de pontinhos (LEDs) em anéis radiais sobre a curvatura do globo. */
+      function dottedIris(radius) {
+        const cfg = CFG.iris;
+        const cInner = new THREE.Color(CFG.colors.irisInner);
+        const cOuter = new THREE.Color(CFG.colors.irisOuter);
+        const dots = [];
+
+        for (let i = 0; i < cfg.rings; i++) {
+          const t = cfg.rings === 1 ? 0 : i / (cfg.rings - 1);
+          const theta = cfg.thetaInner + (cfg.thetaOuter - cfg.thetaInner) * t;
+          const ringRadius = Math.sin(theta) * radius;
+          const size = cfg.dotSize * (1 + (cfg.dotSizeOuterBoost - 1) * t);
+          const count = Math.max(6, Math.round((2 * Math.PI * ringRadius * cfg.density) / (size * 3.3)));
+          const offset = (i % 2) * (Math.PI / count);
+          const color = cInner.clone().lerp(cOuter, t);
+          const brightness = cfg.brightnessInner + (cfg.brightnessOuter - cfg.brightnessInner) * t;
+
+          for (let j = 0; j < count; j++) {
+            const phi = offset + (j / count) * Math.PI * 2;
+            const jt = theta + (Math.random() - 0.5) * cfg.jitter * 0.06;
+            const jp = phi + (Math.random() - 0.5) * cfg.jitter * (Math.PI / count);
+            dots.push({
+              p: new THREE.Vector3(
+                radius * Math.sin(jt) * Math.cos(jp),
+                radius * Math.sin(jt) * Math.sin(jp),
+                radius * Math.cos(jt),
+              ),
+              s: size * (1 + (Math.random() - 0.5) * cfg.jitter),
+              c: color.clone().multiplyScalar(brightness * (0.85 + Math.random() * 0.3)),
+            });
+          }
+        }
+
+        const im = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 8, 6),
+          new THREE.MeshBasicMaterial({ toneMapped: false }),
+          dots.length,
+        );
+        const m4 = new THREE.Matrix4();
+        dots.forEach((d, idx) => {
+          m4.makeScale(d.s, d.s, d.s * 0.8);
+          m4.setPosition(d.p);
+          im.setMatrixAt(idx, m4);
+          im.setColorAt(idx, d.c);
+        });
+        im.instanceMatrix.needsUpdate = true;
+        if (im.instanceColor) im.instanceColor.needsUpdate = true;
+        return im;
+      }
 
       function makeEye(x) {
         const r = CFG.eyeRadius;
@@ -109,13 +170,14 @@
             new THREE.MeshStandardMaterial({ color: CFG.colors.sclera, roughness: 0.35, metalness: 0.85 }),
           ),
         );
-        globe.add(cap(r * 1.002, 0.72, CFG.colors.irisOuter, CFG.colors.irisOuter, 1.4, 0.2, 0.4));
-        globe.add(cap(r * 1.006, 0.63, CFG.colors.irisDeep, CFG.colors.glow, 0.15));
-        globe.add(cap(r * 1.01, 0.54, CFG.colors.irisMid, CFG.colors.irisMid, 1.1));
-        globe.add(cap(r * 1.014, 0.45, CFG.colors.irisDeep, CFG.colors.glow, 0.2));
-        globe.add(cap(r * 1.018, 0.34, CFG.colors.irisInner, CFG.colors.irisInner, 1.6));
-        globe.add(cap(r * 1.022, 0.26, CFG.colors.irisDeep, CFG.colors.glow, 0.3));
-        globe.add(cap(r * 1.026, 0.17, CFG.colors.pupil, 0x000000, 0, 0.1, 0.2));
+        // fundo escuro da íris
+        globe.add(cap(r * 1.004, CFG.iris.thetaOuter + 0.04, CFG.colors.irisDeep, CFG.colors.irisDeep, 0.25, 0.35, 0.5));
+        // pontinhos (LEDs)
+        globe.add(dottedIris(r * 1.012));
+        // limbo: anel externo fino e luminoso
+        globe.add(cap(r * 1.03, 0.02, CFG.colors.irisOuter, CFG.colors.irisOuter, 1.2, 0.2, 0.3, CFG.iris.thetaOuter + 0.13));
+        // pupila
+        globe.add(cap(r * 1.02, CFG.iris.thetaInner - 0.02, CFG.colors.pupil, 0x000000, 0, 0.1, 0.2));
         globe.add(
           new THREE.Mesh(
             new THREE.SphereGeometry(r * 1.045, 48, 32),
