@@ -54,7 +54,7 @@ export const EYE_CONFIG = {
   blink: {
     minInterval: 2.6, // intervalo mínimo entre piscadas (s)
     maxInterval: 7.5, // intervalo máximo entre piscadas (s)
-    duration: 0.17, // duração de cada piscada (s)
+    duration: 0.55, // duração de cada piscada (s) — maior = piscada mais lenta
     doubleBlinkChance: 0.18,
   },
 
